@@ -20,14 +20,14 @@ def home(request):
             medicos = medicos.filter(especialidade_id__in=especialidade_filtrar)
 
         especialidades = Especialidades.objects.all()
-        context = {'medicos': medicos, 'especialidades': especialidades}
+        context = {'medicos': medicos, 'especialidades': especialidades, 'is_medico': is_medico(request.user)}
         return render(request, 'home.html', context)
 
 def escolher_horario(request, id_dados_medicos):
     if request.method == "GET":
         medico = DadosMedico.objects.get(id=id_dados_medicos)
         datas_abertas = DatasAbertas.objects.filter(user=medico.user).filter(data__gte=datetime.now()).filter(agendado=False)
-        context = {'medico': medico, 'datas_abertas': datas_abertas}
+        context = {'medico': medico, 'datas_abertas': datas_abertas, 'is_medico': is_medico(request.user)}
     return render(request,'escolher_horario.html', context)
 
 def agendar_horario(request, id_data_aberta):
@@ -50,5 +50,5 @@ def agendar_horario(request, id_data_aberta):
     
 def minhas_consultas(request):
     minhas_consultas = Consulta.objects.filter(paciente=request.user).filter(data_aberta__data__gte=datetime.now())
-    context = {'minhas_consultas': minhas_consultas}
+    context = {'minhas_consultas': minhas_consultas, 'is_medico': is_medico(request.user)}
     return render(request, 'minhas_consultas.html', context)
