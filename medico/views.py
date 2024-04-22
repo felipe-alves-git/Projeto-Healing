@@ -92,6 +92,76 @@ def consultas_medico(request):
     hoje = datetime.now().date()
 
     consultas_hoje = Consulta.objects.filter(data_aberta__user=request.user).filter(data_aberta__data__gte=hoje).filter(data_aberta__data__lt=hoje +timedelta(days=1))
-    consultas_restantes = Consulta.objects.exclude(id__in=consultas_hoje.values('id'))
+    consultas_restantes = Consulta.objects.exclude(id__in=consultas_hoje.values('id')).filter(data_aberta__user=request.user)
     context = {'consultas_hoje': consultas_hoje, 'consultas_restantes': consultas_restantes, 'is_medico': is_medico(request.user)}
     return render(request, 'consultas_medico.html', context)
+
+def consulta_area_medico(request, id_consulta):
+    if not is_medico(request.user):
+        messages.add_message(request, constants.WARNING, "Somente médicos podem abrir horários!")
+        return redirect('/usuarios/sair')
+    
+    if request.method == "GET":
+        consulta = Consulta.objects.get(id=id_consulta)
+        documentos = Documento.objects.filter(consulta=consulta)
+        context = {'consulta': consulta, 'documentos': documentos}
+
+        return render(request, 'consulta_area_medico.html', context)
+    elif request.method =="POST":
+        consulta = Consulta.objects.get(id=id_consulta)
+        link = request.POST.get('link')
+
+        if consulta.status == "C":
+            messages.add_message(request, constants.WARNING, "Esta Consulta Ja Foi Cancelada!")
+            return redirect(f'/medicos/consultas_area_medico/{id_consulta}')
+        elif consulta.status == "F":
+            messages.add_message(request, constants.WARNING, "Esta Consulta Ja Foi Finalizada!")
+            return redirect (f'/medicos/consultas_area_medico/{id_consulta}')
+        
+        consulta.link = link
+        consulta.status = 'I'
+        consulta.save()
+
+        messages.add_message(request, constants.SUCCESS, "Consulta Inicializada!")
+        return redirect (f'/medicos/consultas_area_medico/{id_consulta}')
+    
+
+def finalizar_consulta(request, id_consulta):
+    if not is_medico(request.user):
+        messages.add_message(request, constants.WARNING, "Somente médicos podem abrir horários!")
+        return redirect('/usuarios/sair')
+    
+    consulta = Consulta.objects.get(id=id_consulta)
+    if request.user != consulta.data_aberta.user:
+        messages.add_message(request, constants.ERROR, "Esta consulta não é sua!")
+        
+    consulta.status = "F"
+    consulta.save()
+    return redirect (f'/medicos/consultas_area_medico/{id_consulta}')
+
+def add_documento(request, id_consulta):
+    if not is_medico(request.user):
+        messages.add_message(request, constants.WARNING, "Somente médicos podem abrir horários!")
+        return redirect('/usuarios/sair')
+    
+    consulta = Consulta.objects.get(id=id_consulta)
+    if request.user != consulta.data_aberta.user:
+        messages.add_message(request, constants.ERROR, "Esta consulta não é sua!")
+        return redirect('/medicos/abrir_horario/')
+    
+    titulo = request.POST.get('titulo')
+    documento = request.FILES.get('documento')
+
+    if not documento:
+        messages.add_message(request, constants.WARNING, "Preencha o Campo documento!")
+        return redirect (f'/medicos/consultas_area_medico/{id_consulta}')
+    
+    documento = Documento(
+        consulta=consulta,
+        titulo=titulo,
+        documento=documento
+    )
+
+    documento.save()
+    messages.add_message(request, constants.SUCCESS, "Documento Salvo com Sucesso!")
+    return redirect (f'/medicos/consultas_area_medico/{id_consulta}')

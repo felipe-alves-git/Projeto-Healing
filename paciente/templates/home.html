@@ -61,7 +61,9 @@
 <div class="col-md-4">
 <p style="font-size: 25px" class="p-bold">Lembretes</p>
 <p class="bg-main-lembrete">
-<span class="p-bold"><i class="bi bi-exclamation-triangle-fill icon-differential"></i>&nbsp&nbsp Consulta com Pedro Sampario em 7 dias.</span>
+    {% for lembrete in lembretes %}
+<span class="p-bold"><i class="bi bi-exclamation-triangle-fill icon-differential"></i>{{lembrete.consulta}}</span>
+    {% endfor %}
 </p>
 </div>
 </div>
